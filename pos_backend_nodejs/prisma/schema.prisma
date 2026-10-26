@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+// User model
+model User {
+  id        String   @id @default(cuid()) @map("_id")
+  username  String   @unique
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  storeId   String
+  role      String   @default("cashier")
+  isActive  Boolean  @default(true)
+  isActivePos Boolean @default(false)
+  emailVerified Boolean @default(false)
+  emailVerificationToken String?
+  passwordResetToken     String?
+  passwordResetExpires   DateTime?
+  lastLogin              DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdProducts         Product[]
+  createdTransactions     InventoryTransaction[]
+  sales                   Sale[]
+
+  @@map("users")
+}
+
+// Product model
+model Product {
+  id               String   @id @default(cuid()) @map("_id")
+  barcode          String   @unique
+  name             String
+  description      String?
+  category         String
+  price            Float
+  costPrice        Float
+  stockQuantity    Int      @default(0)
+  minimumStockLevel Int     @default(5)
+  isActive         Boolean  @default(true)
+  isLowStock       Boolean  @default(false)
+  profitMargin     Float?
+  storeId          String
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  creator              User                 @relation(fields: [createdBy], references: [id])
+  inventoryTransactions InventoryTransaction[]
+  saleItems            SaleItem[]
+
+  @@map("products")
+}
+
+// Sale model
+model Sale {
+  id           String   @id @default(cuid()) @map("_id")
+  saleNumber   String   @unique
+  cashierId    String
+  storeId      String
+  subtotal     Float
+  taxAmount    Float   @default(0)
+  discountAmount Float @default(0)
+  totalAmount  Float
+  paymentMethod String @default("cash")
+  status       String @default("pending")
+  notes        String?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  cashier    User       @relation(fields: [cashierId], references: [id])
+  saleItems  SaleItem[]
+
+  @@map("sales")
+}
+
+// SaleItem model
+model SaleItem {
+  id         String @id @default(cuid()) @map("_id")
+  productId  String
+  productName String
+  productBarcode String
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  saleId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  sale    Sale    @relation(fields: [saleId], references: [id])
+
+  @@map("sale_items")
+}
+
+// InventoryTransaction model
+model InventoryTransaction {
+  id             String   @id @default(cuid()) @map("_id")
+  productId      String
+  productName    String
+  productBarcode String
+  transactionType String
+  quantityChange Int
+  previousQuantity Int
+  newQuantity    Int
+  reference      String?
+  notes          String?
+  storeId        String
+  createdBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@map("inventory_transactions")
+}
